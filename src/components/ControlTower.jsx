@@ -1,9 +1,11 @@
 import StatusBadge from './StatusBadge';
+import CapitalView from './CapitalView';
 import { money } from '../logic';
 export default function ControlTower({cycles,onOpen}){
  const act=cycles.filter(c=>c.actionLabel==='Act today');
  const escalated=cycles.filter(c=>c.management && c.status!=='Closed');
  return <>
+  <CapitalView cycles={cycles}/>
   <section className="kpis">
    <div className="kpi"><span>Breached cycles</span><strong>{cycles.filter(c=>c.status==='Breached').length}</strong></div>
    <div className="kpi"><span>At-risk cycles</span><strong>{cycles.filter(c=>c.status==='At risk').length}</strong></div>
@@ -22,7 +24,7 @@ export default function ControlTower({cycles,onOpen}){
    {escalated.map(c=><button className="management-row" key={c.id} onClick={()=>onOpen(c)}><div><strong>{c.client} · {c.site}</strong><p>{c.managementAsk||'Management support requested.'}</p></div><div><strong>{money(c.affected)}</strong><small>{c.reason}</small></div></button>)}
   </section>}
   <section className="panel"><div className="section-head"><div><p className="eyebrow">ALL CYCLES</p><h2>Current billing-cycle health</h2></div></div>
-   <div className="table-wrap"><table><thead><tr><th>Client</th><th>Affected exposure</th><th>Primary issue</th><th>Status</th><th>Action</th><th>Owner</th></tr></thead><tbody>{cycles.map(c=><tr key={c.id} onClick={()=>onOpen(c)}><td><strong>{c.client}</strong><small>{c.site} · {c.service}</small></td><td>{money(c.affected)}</td><td>{c.primary?.label||'Cycle complete'}{c.otherOpen>0&&<small>+ {c.otherOpen} other open</small>}</td><td><StatusBadge status={c.status}/></td><td>{c.actionLabel}</td><td>{c.owner}</td></tr>)}</tbody></table></div>
+   <div className="table-wrap"><table><thead><tr><th>Client</th><th>Affected exposure</th><th>Primary issue</th><th>Status</th><th>Action</th><th>Owner</th></tr></thead><tbody>{cycles.map(c=><tr key={c.id} onClick={()=>onOpen(c)}><td><strong>{c.client}</strong><small>{c.site} · {c.service}</small></td><td>{money(c.affected)}{c.affected<c.value&&<small>of {money(c.value)} gross</small>}</td><td>{c.primary?.label||'Cycle complete'}{c.otherOpen>0&&<small>+ {c.otherOpen} other open</small>}</td><td><StatusBadge status={c.status}/></td><td>{c.actionLabel}</td><td>{c.owner}</td></tr>)}</tbody></table></div>
   </section>
  </>;
 }
