@@ -4,6 +4,7 @@ export const addDays=(iso,days)=>{ const d=new Date(`${iso}T00:00:00`); d.setDat
 export const diffDays=(a,b)=>Math.round((new Date(`${a}T00:00:00`)-new Date(`${b}T00:00:00`))/DAY);
 export const money=(n)=> n>=10000000 ? `₹${(n/10000000).toFixed(n%10000000?1:0)}cr` : `₹${(n/100000).toFixed(n%100000?1:0)}L`;
 export const prettyDate=(iso)=> iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '—';
+export const tierLabel=(tier)=>({T1:'System-attested',T2:'Artefact-attested',T3:'Client-attested',T4:'AI-inferred',T5:'Human-declared'}[tier]||tier||'System');
 
 export function targetsFor(cycle){
   const monthEnd='2026-09-30';
@@ -32,8 +33,6 @@ export function evaluateCycle(cycle, asOf){
   else if(primary?.state==='At risk') reason=`${primary.label} target approaching`;
   else if(primary) reason=`Waiting on ${primary.label}`;
 
-  // POC upstream-buffer rule: if the immediately preceding completed milestone finished late,
-  // surface the current point as At risk even when >3 days remain.
   if(primary && status==='On track' && primary.index>0){
     const prev=details[primary.index-1];
     if(prev.actual && prev.state==='Done late'){
@@ -61,4 +60,17 @@ export function evaluateCycle(cycle, asOf){
 
   return {...cycle,targets,details,status,reason,primary,capitalState,contractDue,actionLabel,
     otherOpen:Math.max(0,active.length-(primary?1:0))};
+}
+
+export function capitalPools(cycles){
+  return cycles.reduce((acc,c)=>{ if(c.capitalState!=='Closed') acc[c.capitalState]=(acc[c.capitalState]||0)+c.affected; return acc; },{});
+}
+
+export function buildActivity(cycle){
+  const items=[];
+  Object.entries(cycle.events).forEach(([event,time])=>{
+    const evidence=cycle.evidence[event];
+    items.push({time:`${time} 10:00`,type:'event',title:eventLabels[event]||event,detail:evidence?`${evidence.tier} · ${evidence.source}`:'Synthetic event',status:evidence?.checker||'Recorded'});
+  });
+  return items.sort((a,b)=>b.time.localeCompare(a.time));
 }
