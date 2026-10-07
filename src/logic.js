@@ -14,9 +14,10 @@ export function targetsFor(cycle){
 
 export function evaluateCycle(cycle, asOf){
   const targets=targetsFor(cycle);
+  const eventsVisible=Object.fromEntries(Object.entries(cycle.events).filter(([,time])=>time<=asOf));
   const keys=Object.keys(targets);
   const details=keys.map((event,i)=>{
-    const target=targets[event], actual=cycle.events[event];
+    const target=targets[event], actual=eventsVisible[event];
     let state='Pending', timing='';
     if(actual){ const late=diffDays(actual,target); state=late>0?'Done late':'Done on time'; timing=late>0?`+${late}d`:`${Math.abs(late)}d early`; }
     else if(asOf>target){ const late=diffDays(asOf,target); state='Breached'; timing=`+${late}d`; }
@@ -42,14 +43,25 @@ export function evaluateCycle(cycle, asOf){
     }
   }
 
-  const invoiceCreated=Boolean(cycle.events.INVOICE_CREATED);
-  const accepted=Boolean(cycle.events.INVOICE_ACCEPTED);
-  const paid=Boolean(cycle.events.CASH_RECEIVED);
+  const visibleIssue=cycle.clientIssue && cycle.clientIssue.time<=asOf ? cycle.clientIssue : null;
+  if(visibleIssue?.type==='MIS_QUERY' && !eventsVisible.MIS_APPROVED){
+    const target=targets.MIS_APPROVED;
+    primary={event:'MIS_APPROVED',label:'MIS approved',target,actual:null,state:asOf>target?'Breached':'At risk',timing:target?(asOf>target?`+${diffDays(asOf,target)}d`:`${diffDays(target,asOf)}d left`):''};
+    status=primary.state;
+    reason=`Client query open: ${visibleIssue.note}`;
+  }
+
+  const invoiceCreated=Boolean(eventsVisible.INVOICE_CREATED);
+  const accepted=Boolean(eventsVisible.INVOICE_ACCEPTED);
+  const paid=Boolean(eventsVisible.CASH_RECEIVED);
   const capitalState=paid?'Closed':accepted?'Payment':invoiceCreated?'Invoiced, not accepted':'Pre-invoice';
-  const contractDue=accepted?addDays(cycle.events.INVOICE_ACCEPTED,cycle.creditDays):null;
+  const contractDue=accepted?addDays(eventsVisible.INVOICE_ACCEPTED,cycle.creditDays):null;
   if(!paid && accepted && asOf>contractDue){
     status='Breached'; primary={event:'CASH_RECEIVED',label:'Cash received',target:contractDue,actual:null,state:'Breached',timing:`+${diffDays(asOf,contractDue)}d`};
     reason=`Payment past contractual due date by ${diffDays(asOf,contractDue)}d`;
+  }
+  if(visibleIssue?.type==='INV_DISPUTED'){
+    reason=`Invoice dispute open: ${visibleIssue.note}`;
   }
 
   let actionLabel='Watch';
@@ -58,27 +70,26 @@ export function evaluateCycle(cycle, asOf){
   else if(cycle.action.available && cycle.action.effectiveness!=='None') actionLabel='Act today';
   else actionLabel='Diagnose';
 
-  return {...cycle,targets,details,status,reason,primary,capitalState,contractDue,actionLabel,
+  return {...cycle,eventsVisible,clientIssue:visibleIssue,targets,details,status,reason,primary,capitalState,contractDue,actionLabel,
     otherOpen:Math.max(0,active.length-(primary?1:0))};
 }
-
 export function capitalPools(cycles){
   return cycles.reduce((acc,c)=>{ if(c.capitalState!=='Closed') acc[c.capitalState]=(acc[c.capitalState]||0)+c.affected; return acc; },{});
 }
 
 export function buildActivity(cycle,notifications=[]){
   const items=[];
-  Object.entries(cycle.events).forEach(([event,time])=>{
+  Object.entries(cycle.eventsVisible||{}).forEach(([event,time])=>{
     const evidence=cycle.evidence[event];
     items.push({time:`${time} 10:00`,type:'event',title:eventLabels[event]||event,detail:evidence?`${evidence.tier} · ${evidence.source}`:'Synthetic event',status:evidence?.checker||'Recorded'});
   });
   if(cycle.action?.taken){
-    items.push({time:`${cycle.events.INV_DISPUTED || cycle.events.MIS_APPROVED || '2026-10-15'} 15:00`,type:'action',title:'Operating action recorded',detail:cycle.action.text,status:cycle.action.followUp?`Follow-up ${cycle.action.followUp}`:'Action taken'});
+    const actionDate=(cycle.eventsVisible?.INV_DISPUTED || cycle.eventsVisible?.MIS_APPROVED || '2026-10-15');
+    items.push({time:`${actionDate} 15:00`,type:'action',title:'Operating action recorded',detail:cycle.action.text,status:cycle.action.followUp?`Follow-up ${cycle.action.followUp}`:'Action taken'});
   }
   notifications.filter(n=>n.cycleId===cycle.id).forEach(n=>items.push({time:n.time,type:'notification',title:n.title,detail:`${n.channel} · ${n.recipients.join(', ')}`,status:n.status}));
   return items.sort((a,b)=>b.time.localeCompare(a.time));
 }
-
 const routing={
   MIS_READY:[['RPO / preparer'],['RPO SPOC'],['CH&W management']],
   MIS_APPROVED:[['KAM','Client approver'],['KAM','RPO SPOC'],['CH&W management']],
