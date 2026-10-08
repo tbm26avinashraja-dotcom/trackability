@@ -7,7 +7,7 @@ export const benchmarks = {
 
 export const eventLabels = {
   MIS_READY: 'MIS ready', MIS_SHARED: 'MIS shared', MIS_APPROVED: 'MIS approved', MIS_QUERY: 'MIS query',
-  INVOICE_CREATED: 'Invoice created', COMP_RECEIVED: 'Compliance received', COMP_APPROVED: 'Compliance approved',
+  INVOICE_CREATED: 'Invoice created', INVOICE_SUBMITTED: 'Invoice submitted', COMP_RECEIVED: 'Compliance received', COMP_APPROVED: 'Compliance approved',
   SES_APPROVED: 'SES approved', INVOICE_ACCEPTED: 'Invoice accepted', INV_DISPUTED: 'Invoice disputed', CASH_RECEIVED: 'Cash received'
 };
 
@@ -33,7 +33,7 @@ export const cycles = [
     evidence:{
       MIS_READY:ev('Drive artefact','T2','CHW-0002O-2609_MIS.xlsx',{checker:'Provision and line-count checks passed'}),
       MIS_SHARED:ev('Tracker email','T2','Message ID DEMO-TSK-001',{checker:'Attachment hash matched'}),
-      MIS_APPROVED:ev('Client email','T4','“Looks fine, please proceed.”',{actor:'ravi.client@example.com',confidence:'96%',checker:'Sender whitelisted · quote verified'}),
+      MIS_APPROVED:ev('Client email','T4','“Looks fine, please proceed.”',{actor:'ravi.client@example.com',confidence:'High · synthetic POC',checker:'Sender whitelisted · quote verified'}),
       INVOICE_CREATED:ev('SAP/HANA daily extract','T1','SAP document 180034821',{checker:'Cycle ID and amount matched'}),
       COMP_RECEIVED:ev('Compliance folder','T2','PF/ESIC challans · DEMO',{checker:'Wage month and establishment code matched'}),
       COMP_APPROVED:ev('Client portal notification','T1','Portal ref TS-COMP-2609',{checker:'Accepted automatically'})
@@ -63,8 +63,8 @@ export const cycles = [
   {
     id:'CHW-0005O-2609', client:'TCS', site:'Noida', service:'OHC', bucket:'C', value:1200000, affected:1200000,
     owner:'KAM / Client AP', creditDays:45, targetSource:'Bucket C benchmark (provisional)', management:false,
-    events:{ MIS_READY:'2026-10-02', INVOICE_CREATED:'2026-10-05', INVOICE_ACCEPTED:'2026-10-15' },
-    evidence:{ INVOICE_ACCEPTED:ev('Client portal','T1','Portal acceptance TCS-NOI-2609',{checker:'Accepted automatically'}) },
+    events:{ MIS_READY:'2026-10-02', INVOICE_CREATED:'2026-10-05', INVOICE_SUBMITTED:'2026-10-08', INVOICE_ACCEPTED:'2026-10-15' },
+    evidence:{ INVOICE_SUBMITTED:ev('Tracker / client portal','T2','Invoice shared TCS-NOI-2609',{checker:'Invoice reference and Cycle ID matched'}), INVOICE_ACCEPTED:ev('Client portal','T1','Portal acceptance TCS-NOI-2609',{checker:'Accepted automatically'}) },
     action:{available:false,effectiveness:'None',taken:false,followUp:null,text:'Watch payment against contractual due date.'}
   },
   {
@@ -88,8 +88,8 @@ export const cycles = [
   {
     id:'CHW-0008O-2609', client:'Demo Corporate', site:'Mumbai', service:'OHC', bucket:'B', value:10000000, affected:1000000,
     owner:'KAM / Client AP', creditDays:30, targetSource:'Bucket B benchmark', management:false, disputedValue:1000000,
-    events:{ MIS_READY:'2026-10-05', MIS_APPROVED:'2026-10-10', INVOICE_CREATED:'2026-10-13', INVOICE_ACCEPTED:'2026-10-16', INV_DISPUTED:'2026-10-17' },
-    evidence:{ INV_DISPUTED:ev('Client email','T4','“₹10 lakh is disputed pending employee-count reconciliation.”',{actor:'ap.demo@example.com',confidence:'94%',checker:'Sender whitelisted · quote verified'}) },
+    events:{ MIS_READY:'2026-10-05', MIS_APPROVED:'2026-10-10', INVOICE_CREATED:'2026-10-13', INVOICE_SUBMITTED:'2026-10-14', INVOICE_ACCEPTED:'2026-10-16', INV_DISPUTED:'2026-10-17' },
+    evidence:{ INVOICE_SUBMITTED:ev('Tracker email','T2','Invoice shared DEMO-INV-2609',{checker:'Invoice attachment and Cycle ID matched'}), INV_DISPUTED:ev('Client email','T4','“₹10 lakh is disputed pending employee-count reconciliation.”',{actor:'ap.demo@example.com',confidence:'High · synthetic POC',checker:'Sender whitelisted · quote verified'}) },
     action:{available:true,effectiveness:'Clear',taken:true,followUp:'2026-10-20',text:'Resolve the disputed ₹10L portion; undisputed amount continues normally.'},
     clientTask:{type:'DISPUTE',title:'Invoice dispute under review'}
   }
